@@ -1,20 +1,19 @@
-// Pull readable text out of a web page.
-//
-// Browsers block most cross-origin page fetches (CORS). We try a direct fetch
-// first, and if that fails we fall back to a public read-only proxy. You can
-// swap the proxy for your own if you'd rather not depend on a third party.
-const PROXY = 'https://api.allorigins.win/raw?url=';
+// CORS proxies tried in order until one works
+const PROXIES = [
+  (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+];
 
 function stripHtml(html) {
   const doc = new DOMParser().parseFromString(html, 'text/html');
-  // Drop things that never contain reading content.
   doc.querySelectorAll('script, style, noscript, svg, head').forEach((el) => el.remove());
   const text = doc.body ? doc.body.innerText || doc.body.textContent || '' : '';
   return text.replace(/\n{3,}/g, '\n\n').trim();
 }
 
 async function fetchText(url) {
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
   if (!res.ok) throw new Error(`Request failed (${res.status})`);
   return res.text();
 }
@@ -25,16 +24,31 @@ export async function extractFromUrl(rawUrl, onProgress) {
 
   onProgress?.('Fetching the page…');
 
-  let html;
+  // Try direct fetch first (works if the site allows CORS)
   try {
-    html = await fetchText(url);
+    const html = await fetchText(url);
+    onProgress?.('Reading the text…');
+    const text = stripHtml(html);
+    if (!text) throw new Error('No readable text found on that page.');
+    return text;
   } catch {
-    onProgress?.('Direct fetch blocked, trying a proxy…');
-    html = await fetchText(PROXY + encodeURIComponent(url));
+    // Direct fetch failed — try each proxy in turn
   }
 
-  onProgress?.('Reading the text…');
-  const text = stripHtml(html);
-  if (!text) throw new Error('No readable text found on that page.');
-  return text;
+  for (let i = 0; i < PROXIES.length; i++) {
+    onProgress?.(`Trying proxy ${i + 1} of ${PROXIES.length}…`);
+    try {
+      const html = await fetchText(PROXIES[i](url));
+      onProgress?.('Reading the text…');
+      const text = stripHtml(html);
+      if (!text) throw new Error('No readable text found on that page.');
+      return text;
+    } catch {
+      // try next proxy
+    }
+  }
+
+  throw new Error(
+    'Could not fetch that page. The site may block all external requests.'
+  );
 }

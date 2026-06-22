@@ -6,9 +6,9 @@ import { extractFromImage } from './utils/extractFromImage.js';
 import { extractFromPdf } from './utils/extractFromPdf.js';
 
 const TABS = [
-  { id: 'link', label: 'Link', hint: 'a web page URL' },
+  { id: 'link',  label: 'Link',  hint: 'a web page URL' },
   { id: 'image', label: 'Image', hint: 'a photo or screenshot' },
-  { id: 'pdf', label: 'PDF', hint: 'a document file' },
+  { id: 'pdf',   label: 'PDF',   hint: 'a document file' },
 ];
 
 export default function App() {
@@ -23,7 +23,7 @@ export default function App() {
   const fileRef = useRef(null);
 
   useEffect(() => {
-    warmUp(); // load the dictionary ahead of time
+    warmUp();
   }, []);
 
   function reset() {
@@ -48,7 +48,7 @@ export default function App() {
       if (tab === 'link') {
         if (!url.trim()) throw new Error('Paste a web link first.');
         text = await extractFromUrl(url, setStatus);
-        srcLabel = 'the link';
+        srcLabel = url;
       } else if (tab === 'image') {
         if (!file) throw new Error('Choose an image first.');
         text = await extractFromImage(file, setStatus);
@@ -80,7 +80,7 @@ export default function App() {
           Proof<span className="wordmark-accent">Mark</span>
         </div>
         <p className="tagline">
-          Drop in a link, an image, or a PDF. Get back every word that looks misspelled.
+          Drop in a link, an image, or a PDF. Get back every word with a missing letter.
         </p>
       </header>
 
@@ -108,7 +108,7 @@ export default function App() {
               className="url-input"
               placeholder="https://example.com/article"
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => { setUrl(e.target.value); reset(); }}
               onKeyDown={(e) => e.key === 'Enter' && !busy && run()}
             />
           ) : (
@@ -150,8 +150,7 @@ export default function App() {
       </main>
 
       <footer className="footer">
-        Checks English spelling against an open Hunspell dictionary. Everything runs in your
-        browser — nothing is uploaded.
+        Finds words with a missing letter only. Everything runs in your browser — nothing is uploaded.
       </footer>
     </div>
   );
