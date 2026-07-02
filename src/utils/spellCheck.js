@@ -29,6 +29,8 @@ function tokenize(text) {
 function isCheckable(word) {
   if (word.length < 2) return false;
   if (/\d/.test(word)) return false;
+  // Skip acronyms/initialisms (ROI, CRM, SMS, …) — not real typos.
+  if (word === word.toUpperCase()) return false;
   return true;
 }
 
