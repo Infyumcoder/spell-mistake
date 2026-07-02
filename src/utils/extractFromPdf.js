@@ -12,20 +12,20 @@ export async function extractFromPdf(file, onProgress) {
   const buffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
 
-  let fullText = '';
+  const pages = [];
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     onProgress?.(`Reading page ${pageNum} of ${pdf.numPages}…`);
     const page = await pdf.getPage(pageNum);
     const content = await page.getTextContent();
-    const pageText = content.items.map((item) => item.str).join(' ');
-    fullText += pageText + '\n\n';
+    const pageText = content.items.map((item) => item.str).join(' ').trim();
+    pages.push(pageText);
   }
 
-  const text = fullText.trim();
+  const text = pages.join('\n\n').trim();
   if (!text) {
     throw new Error(
       'No selectable text found. This may be a scanned PDF — try the Image tab instead.'
     );
   }
-  return text;
+  return { text, pages: pages.filter((p) => p) };
 }

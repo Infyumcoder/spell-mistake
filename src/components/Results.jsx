@@ -1,87 +1,121 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 
-// Rebuild the original text with misspelled words wrapped so we can draw
-// the proofreader's red squiggle under each one.
-function MarkedText({ text, issues }) {
-  const parts = useMemo(() => {
-    if (!issues.length) return [{ type: 'text', value: text }];
-    const sorted = [...issues].sort((a, b) => a.index - b.index);
-    const out = [];
-    let cursor = 0;
-    sorted.forEach((issue, i) => {
-      const start = issue.index;
-      const end = start + issue.word.length;
-      if (start > cursor) out.push({ type: 'text', value: text.slice(cursor, start) });
-      out.push({ type: 'flag', value: text.slice(start, end), key: i, suggestions: issue.suggestions });
-      cursor = end;
-    });
-    if (cursor < text.length) out.push({ type: 'text', value: text.slice(cursor) });
-    return out;
-  }, [text, issues]);
-
+function IssueTable({ issues }) {
   return (
-    <p className="marked">
-      {parts.map((p, i) =>
-        p.type === 'flag' ? (
-          <mark
-            key={i}
-            className="flag"
-            title={p.suggestions.length ? `Try: ${p.suggestions.join(', ')}` : 'No suggestion'}
-          >
-            {p.value}
-          </mark>
-        ) : (
-          <span key={i}>{p.value}</span>
-        )
+    <ol className="issue-list">
+      {issues.map((issue, i) => (
+        <li key={i} className="issue-card">
+          {issue.pageNumber != null && (
+            <span className="issue-page">Page {issue.pageNumber}</span>
+          )}
+          <span className="issue-type" data-type={issue.issueType}>{issue.issueType}</span>
+          <div className="issue-row">
+            <span className="issue-field-label">Original:</span>
+            <span className="issue-original">{issue.originalText}</span>
+          </div>
+          <div className="issue-row">
+            <span className="issue-field-label">Why:</span>
+            <span className="issue-explanation">{issue.explanation}</span>
+          </div>
+          <div className="issue-row">
+            <span className="issue-field-label">Fix:</span>
+            <span className="issue-fix">{issue.suggestedCorrection}</span>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function CopySuggestions({ suggestions }) {
+  const fields = [
+    ['clarity', 'Clarity'],
+    ['conversion', 'Conversion potential'],
+    ['professionalism', 'Professionalism'],
+    ['readability', 'Readability'],
+    ['callToAction', 'Call-to-action strength'],
+  ];
+  return (
+    <dl className="copy-suggestions">
+      {fields.map(([key, label]) =>
+        suggestions[key] ? (
+          <div key={key} className="copy-suggestion">
+            <dt>{label}</dt>
+            <dd>{suggestions[key]}</dd>
+          </div>
+        ) : null
       )}
-    </p>
+    </dl>
   );
 }
 
 export default function Results({ source, report }) {
   if (!report) return null;
 
-  const { total, misspelledCount, uniqueIssues } = report;
-  const clean = misspelledCount === 0;
+  const { pages, isMultiPage, combinedText, combinedCorrectedText, combinedIssues, issueTypeCounts, totalIssues, isMarketingCopy, copySuggestions } = report;
+  const clean = totalIssues === 0;
 
   return (
     <section className="results" aria-live="polite">
       <div className="results-head">
         <div className="proofmark" data-clean={clean}>
-          <span className="proofmark-count">{misspelledCount}</span>
+          <span className="proofmark-count">{totalIssues}</span>
           <span className="proofmark-label">
-            {clean ? 'all clear' : misspelledCount === 1 ? 'word to fix' : 'words to fix'}
+            {clean ? 'all clear' : totalIssues === 1 ? 'issue found' : 'issues found'}
           </span>
         </div>
         <div className="results-meta">
-          <span>{total.toLocaleString()} words checked</span>
+          <span>{pages.length} page{pages.length === 1 ? '' : 's'} analyzed</span>
           <span className="dot" aria-hidden="true">·</span>
           <span>from {source}</span>
         </div>
       </div>
 
-      {clean ? (
-        <p className="empty">No spelling mistakes found. The text reads clean.</p>
-      ) : (
-        <>
-          <ol className="issue-list">
-            {uniqueIssues.map((issue) => (
-              <li key={issue.word} className="issue">
-                <span className="issue-word">{issue.word}</span>
-                {issue.count > 1 && <span className="issue-count">×{issue.count}</span>}
-                <span className="issue-arrow" aria-hidden="true">→</span>
-                <span className="issue-suggest">
-                  {issue.suggestions.length ? issue.suggestions.join(', ') : 'no suggestion'}
-                </span>
-              </li>
-            ))}
-          </ol>
+      <details className="section-block" open>
+        <summary>OCR Extracted Text</summary>
+        <p className="block-text">{combinedText}</p>
+      </details>
 
-          <details className="marked-wrap">
-            <summary>Show the text with mistakes marked</summary>
-            <MarkedText text={report.text} issues={report.issues} />
-          </details>
-        </>
+      <div className="section-block">
+        <h3 className="section-title">Grammar &amp; Writing Issues Found</h3>
+        {clean ? (
+          <p className="empty">✓ No grammar, spelling, or readability issues detected.</p>
+        ) : isMultiPage ? (
+          <>
+            <ul className="summary-badges">
+              {Object.entries(issueTypeCounts).map(([type, count]) => (
+                <li key={type} className="summary-badge">
+                  <span>{type}</span>
+                  <span className="summary-badge-count">{count}</span>
+                </li>
+              ))}
+            </ul>
+            {pages.map((page) => (
+              <div key={page.pageNumber} className="page-block">
+                <h4 className="page-title">Page {page.pageNumber}</h4>
+                {page.issues.length === 0 ? (
+                  <p className="empty">✓ No issues detected on this page.</p>
+                ) : (
+                  <IssueTable issues={page.issues.map((iss) => ({ ...iss, pageNumber: null }))} />
+                )}
+              </div>
+            ))}
+          </>
+        ) : (
+          <IssueTable issues={combinedIssues} />
+        )}
+      </div>
+
+      <details className="section-block">
+        <summary>Corrected Version</summary>
+        <p className="block-text">{combinedCorrectedText}</p>
+      </details>
+
+      {isMarketingCopy && copySuggestions && (
+        <div className="section-block">
+          <h3 className="section-title">Copy Improvement Suggestions</h3>
+          <CopySuggestions suggestions={copySuggestions} />
+        </div>
       )}
     </section>
   );
