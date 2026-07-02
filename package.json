@@ -3,14 +3,13 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Find spelling mistakes in text pulled from a web link, an image, or a PDF.",
+  "description": "Grammarly-style grammar, spelling, tone, and readability checker for text pulled from a web link, an image, or a PDF, powered by the Claude API.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "nspell": "^2.1.5",
     "pdfjs-dist": "^4.7.76",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
