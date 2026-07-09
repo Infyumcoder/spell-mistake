@@ -34,6 +34,19 @@ function isCheckable(word) {
   return true;
 }
 
+// A "misspelled" word that's actually two real words stuck together
+// (e.g. "Nowwe" from "Now" + "we", missing a space between them) is a
+// spacing/extraction artifact, not a spelling mistake — don't flag it.
+function isMissingSpace(word, spell) {
+  const lower = word.toLowerCase();
+  for (let i = 2; i <= lower.length - 2; i++) {
+    const left = lower.slice(0, i);
+    const right = lower.slice(i);
+    if (spell.correct(left) && spell.correct(right)) return true;
+  }
+  return false;
+}
+
 export async function checkSpelling(text) {
   const spell = await getSpell();
   const tokens = tokenize(text || '');
@@ -47,6 +60,9 @@ export async function checkSpelling(text) {
 
     const correct = spell.correct(clean) || spell.correct(clean.toLowerCase());
     if (correct) continue;
+
+    // Not a spelling mistake — just two real words with a missing space.
+    if (isMissingSpace(clean, spell)) continue;
 
     // nspell's suggest() catches every kind of typo — missing, extra, wrong,
     // or transposed letters — not just single-letter insertions.
