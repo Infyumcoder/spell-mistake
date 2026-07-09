@@ -5,11 +5,37 @@ const PROXIES = [
   (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
 ];
 
+// Tags whose content should never run into a neighboring element's text
+// without a space — otherwise "Buy Now" followed by "we grow…" in separate
+// elements gets fused into "Nowwe" by plain textContent.
+const BLOCK_TAGS = new Set([
+  'ADDRESS', 'ARTICLE', 'ASIDE', 'BLOCKQUOTE', 'BR', 'DETAILS', 'DIALOG', 'DD', 'DIV', 'DL', 'DT',
+  'FIELDSET', 'FIGCAPTION', 'FIGURE', 'FOOTER', 'FORM', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HEADER',
+  'HR', 'LI', 'MAIN', 'NAV', 'OL', 'P', 'PRE', 'SECTION', 'TABLE', 'TR', 'TD', 'TH', 'UL',
+]);
+
+function extractSpacedText(node) {
+  let out = '';
+  for (const child of node.childNodes) {
+    if (child.nodeType === Node.TEXT_NODE) {
+      out += child.textContent;
+    } else if (child.nodeType === Node.ELEMENT_NODE) {
+      if (child.tagName === 'BR') {
+        out += '\n';
+        continue;
+      }
+      out += extractSpacedText(child);
+      if (BLOCK_TAGS.has(child.tagName)) out += '\n';
+    }
+  }
+  return out;
+}
+
 function stripHtml(html) {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   doc.querySelectorAll('script, style, noscript, svg, head').forEach((el) => el.remove());
-  const text = doc.body ? doc.body.innerText || doc.body.textContent || '' : '';
-  return text.replace(/\n{3,}/g, '\n\n').trim();
+  const text = doc.body ? extractSpacedText(doc.body) : '';
+  return text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 async function fetchText(url) {
