@@ -34,24 +34,6 @@ function isCheckable(word) {
   return true;
 }
 
-const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
-
-// Returns valid words formed by inserting exactly one missing letter.
-function getMissingLetterFixes(word, spell) {
-  const lower = word.toLowerCase();
-  const fixes = [];
-  for (let i = 0; i <= lower.length; i++) {
-    for (const ch of LETTERS) {
-      const candidate = lower.slice(0, i) + ch + lower.slice(i);
-      if (spell.correct(candidate) && !fixes.includes(candidate)) {
-        fixes.push(candidate);
-        if (fixes.length >= 5) return fixes;
-      }
-    }
-  }
-  return fixes;
-}
-
 export async function checkSpelling(text) {
   const spell = await getSpell();
   const tokens = tokenize(text || '');
@@ -66,17 +48,17 @@ export async function checkSpelling(text) {
     const correct = spell.correct(clean) || spell.correct(clean.toLowerCase());
     if (correct) continue;
 
-    // Only flag if exactly one letter insertion fixes it
-    const fixes = getMissingLetterFixes(clean, spell);
-    if (fixes.length === 0) continue;
+    // nspell's suggest() catches every kind of typo — missing, extra, wrong,
+    // or transposed letters — not just single-letter insertions.
+    const suggestions = spell.suggest(clean.toLowerCase()).slice(0, 5);
 
-    issues.push({ word: clean, index, suggestions: fixes });
+    issues.push({ word: clean, index, suggestions });
 
     const key = clean.toLowerCase();
     if (seen.has(key)) {
       seen.get(key).count += 1;
     } else {
-      seen.set(key, { word: clean, count: 1, suggestions: fixes });
+      seen.set(key, { word: clean, count: 1, suggestions });
     }
   }
 
