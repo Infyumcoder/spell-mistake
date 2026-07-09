@@ -31,7 +31,19 @@ function isCheckable(word) {
   if (/\d/.test(word)) return false;
   // Skip acronyms/initialisms (ROI, CRM, SMS, …) — not real typos.
   if (word === word.toUpperCase()) return false;
+  // Skip camelCase/PascalCase brand names (TikTok, YouTube, PayPal, iPhone) —
+  // not real typos, just proper nouns no English dictionary will ever have.
+  if (/[A-Z]/.test(word.slice(1))) return false;
   return true;
+}
+
+// Hyphenated compounds (long-term, well-known) are correctly spelled if
+// every hyphen-separated part is a real word, even though the dictionary
+// has no entry for the combined form.
+function isHyphenCompound(word, spell) {
+  if (!word.includes('-')) return false;
+  const parts = word.split('-').filter(Boolean);
+  return parts.length > 1 && parts.every((part) => spell.correct(part) || spell.correct(part.toLowerCase()));
 }
 
 // A "misspelled" word that's actually two real words stuck together
@@ -60,6 +72,9 @@ export async function checkSpelling(text) {
 
     const correct = spell.correct(clean) || spell.correct(clean.toLowerCase());
     if (correct) continue;
+
+    // Not a spelling mistake — a correctly spelled hyphenated compound.
+    if (isHyphenCompound(clean, spell)) continue;
 
     // Not a spelling mistake — just two real words with a missing space.
     if (isMissingSpace(clean, spell)) continue;
