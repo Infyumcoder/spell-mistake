@@ -80,7 +80,7 @@ export default function App() {
           Proof<span className="wordmark-accent">Mark</span>
         </div>
         <p className="tagline">
-          Drop in a link, an image, or a PDF. Get back every word with a missing letter.
+          Drop in a link, an image, or a PDF. Get back every word that's spelled wrong.
         </p>
       </header>
 
@@ -150,7 +150,7 @@ export default function App() {
       </main>
 
       <footer className="footer">
-        Finds words with a missing letter only. Everything runs in your browser — nothing is uploaded.
+        Everything runs in your browser — nothing is uploaded.
       </footer>
     </div>
   );

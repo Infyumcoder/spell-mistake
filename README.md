@@ -13,8 +13,8 @@ suggestions. Everything runs in the browser; nothing is uploaded to a server.
 | **PDF** | Pulls the embedded text (pdf.js). |
 
 The extracted text is checked against an open English Hunspell dictionary
-(`nspell` + `dictionary-en`). Misspelled words get a red squiggle and a list of
-suggested corrections.
+(`nspell` + `dictionary-en`). Any word the dictionary doesn't recognize gets a
+red squiggle and a list of suggested corrections.
 
 ## Run it
 

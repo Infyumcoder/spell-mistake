@@ -1,7 +1,7 @@
 // CORS proxies tried in order until one works
 const PROXIES = [
   (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
   (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
 ];
 
